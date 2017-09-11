@@ -1,11 +1,12 @@
 import requests
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
+import re
 
 url = "http://export.arxiv.org/oai2"
 req = {"verb":"ListRecords",
-       "from":"2017-09-04",
-       "until":"2017-09-05",
+       "from":"2017-09-08",
+       "until":"2017-09-09",
        "metadataPrefix":"arXiv",
        "set":"physics:astro-ph"}
 
@@ -19,19 +20,35 @@ root = ET.fromstring(r.text)
 
 recs = root.findall('./{http://www.openarchives.org/OAI/2.0/}ListRecords/*')
 
-keynames = recs[0].findall('{http://www.openarchives.org/OAI/2.0/}metadata/{http://arxiv.org/OAI/arXiv/}arXiv/{http://arxiv.org/OAI/arXiv/}authors/{http://arxiv.org/OAI/arXiv/}author/{http://arxiv.org/OAI/arXiv/}keyname')
-forenames = recs[0].findall('{http://www.openarchives.org/OAI/2.0/}metadata/{http://arxiv.org/OAI/arXiv/}arXiv/{http://arxiv.org/OAI/arXiv/}authors/{http://arxiv.org/OAI/arXiv/}author/{http://arxiv.org/OAI/arXiv/}forenames')
-title = recs[0].findall('{http://www.openarchives.org/OAI/2.0/}metadata/{http://arxiv.org/OAI/arXiv/}arXiv/{http://arxiv.org/OAI/arXiv/}title')
-abstract = recs[0].findall('{http://www.openarchives.org/OAI/2.0/}metadata/{http://arxiv.org/OAI/arXiv/}arXiv/{http://arxiv.org/OAI/arXiv/}abstract')
+nroot = ET.Element("root")
+print len(recs)
+for rec in recs:
+    keynames = rec.findall('{http://www.openarchives.org/OAI/2.0/}metadata/{http://arxiv.org/OAI/arXiv/}arXiv/{http://arxiv.org/OAI/arXiv/}authors/{http://arxiv.org/OAI/arXiv/}author/{http://arxiv.org/OAI/arXiv/}keyname')
+    forenames = rec.findall('{http://www.openarchives.org/OAI/2.0/}metadata/{http://arxiv.org/OAI/arXiv/}arXiv/{http://arxiv.org/OAI/arXiv/}authors/{http://arxiv.org/OAI/arXiv/}author/{http://arxiv.org/OAI/arXiv/}forenames')
+    title = rec.findall('{http://www.openarchives.org/OAI/2.0/}metadata/{http://arxiv.org/OAI/arXiv/}arXiv/{http://arxiv.org/OAI/arXiv/}title')
+    abstract = rec.findall('{http://www.openarchives.org/OAI/2.0/}metadata/{http://arxiv.org/OAI/arXiv/}arXiv/{http://arxiv.org/OAI/arXiv/}abstract')
 
-for keyname, forename in zip(keynames,forenames):
-    print forename.text, keyname.text
+    if len(keynames) == 1:
+        auth = keynames[0].text + ', ' + forenames[0].text
+    else:
+        auth = keynames[0].text + ', ' + forenames[0].text +'+'
 
-titl = title[0].text
-abst = abstract[0].text
+    titl = title[0].text
+    titl =  ''.join(titl.splitlines())
+    titl = re.sub(' +',' ',titl)
 
-print ''.join(titl.splitlines())
-print ''.join(abst.splitlines())
+    abst = abstract[0].text
+    abst = ''.join(abst.splitlines())
+
+    nrec = ET.SubElement(nroot, "row")
+    ET.SubElement(nrec, "prim_author").text = auth
+    ET.SubElement(nrec, "title").text = titl
+    ET.SubElement(nrec, "abstract").text = abst
+    print auth
+tree = ET.ElementTree(nroot)
+tree.write("arXiv.xml")    
+    
+    #print ''.join(abst.splitlines())
 
 #for child in recs[0]:
 #    print child    
